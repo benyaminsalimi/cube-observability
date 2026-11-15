@@ -71,3 +71,4 @@ For the full decision tree (rename vs new event vs benign event), run the
 | Date | Cube | Contract changes | `make test` | `make e2e` |
 | --- | --- | --- | --- | --- |
 | 2026-11-15 | v1.8.25 | initial contract | pass | pass (16/16) |
+| 2026-11-15 | v1.8.26 | none — no event renames | pass | pass (published tarball) |

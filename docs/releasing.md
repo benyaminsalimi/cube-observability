@@ -60,7 +60,16 @@ get a CI run of its own.
 | End-to-end (Cube + Postgres) | umbrella CI | the exporter breaking against a real server |
 | Grafana panel queries | umbrella CI | provisioned dashboards that render empty |
 
-## One-time setup
+## Current state
+
+- `cube-prometheus@1.8.26` is published and is `latest` on npm.
+- npm **trusted publishing** is configured for `benyaminsalimi/cube-prometheus` /
+  `publish.yml`, so publishing uses OIDC with no token and no 2FA prompt.
+- `AUTO_RELEASE` is unset (releases merge automatically after their gates pass) and
+  `AUTO_PUBLISH=true` (publishing is dispatched automatically after the merge).
+- The `0.0.0-stage` placeholder published while claiming the name is deprecated.
+
+## One-time setup (already done here)
 
 1. **First publish is manual.** npm trusted publishing can only be configured for a package
    that already exists, so the very first `npm publish` needs either a one-time password or
