@@ -77,6 +77,19 @@ using only Cube's public `logger` config option.
       Prometheus ──► Grafana (4 dashboards) ──► Alertmanager (7 rules)
 ```
 
+## Boundaries
+
+Two repositories, one dependency direction, and one owner for every fact:
+
+| | |
+| --- | --- |
+| [cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus) | exporter library, metric contract, npm release |
+| this repository | chart, exporter image, e2e, dashboards, alerts |
+
+The package is a submodule here, never a copy. The Cube version is owned by the package
+and derived everywhere else. [docs/boundaries.md](docs/boundaries.md) lists the rules and
+the checks that fail a build when they are broken.
+
 ## Layout
 
 | Path | What it is | Publishable as |
