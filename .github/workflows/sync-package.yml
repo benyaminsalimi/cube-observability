@@ -110,7 +110,36 @@ jobs:
 
           if gh pr view "$branch" >/dev/null 2>&1; then
             gh pr edit "$branch" --body-file /tmp/pr.md
+            echo "updated pull request for ${branch}"
           else
             gh pr create --base main --head "$branch" \
               --title "chore: bump cube-prometheus to ${TAG}" --body-file /tmp/pr.md
+            echo "opened pull request for ${branch}"
           fi
+
+      - name: Merge the verified pointer bump
+        if: steps.tag.outputs.update == 'true' && vars.AUTO_RELEASE != 'false'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -eu
+          branch="chore/package-${TAG}"
+
+          # The pointer bump must be the only change; anything else needs a human.
+          git fetch --quiet origin main
+          changed="$(git diff --name-only "origin/main...HEAD" | sort)"
+          unexpected="$(printf '%s\n' "$changed" | grep -vE '^packages/cube-prometheus$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "::error::refusing to auto-merge: unexpected files in the sync branch"
+            echo "$unexpected"
+            exit 1
+          fi
+
+          gh pr merge "$branch" --squash --delete-branch
+          echo "merged the pointer bump to ${TAG}"
+
+      - name: Note when auto-release is disabled
+        if: steps.tag.outputs.update == 'true' && vars.AUTO_RELEASE == 'false'
+        run: echo "AUTO_RELEASE is false — pull request left open for review"
+

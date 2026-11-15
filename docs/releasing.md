@@ -5,25 +5,46 @@ was verified against**. `@cube_oss/cube-prometheus@1.8.25` means "tested against
 `cubejs/cube:v1.8.25`".
 
 ```
-cube-prometheus (package)                    cube-observability (chart, image, e2e)
-─────────────────────────                    ─────────────────────────────────────
+cube-prometheus (package)                     cube-observability (chart, image, e2e)
+─────────────────────────                     ─────────────────────────────────────
 detect-cube-release.yml  (daily)
-  └─ newer Cube tag? → PR "release: X.Y.Z"
-        └─ CI: unit + contract vs vX.Y.Z + pack
-              └─ merge
-                    │
-                    ├─ tag vX.Y.Z ──► publish.yml
-                    │                   ├─ tag == package.json
-                    │                   ├─ vX.Y.Z is a real cubejs/cube tag
-                    │                   ├─ contract vs vX.Y.Z
-                    │                   ├─ pack + not already published
-                    │                   ├─ npm publish (trusted publishing, provenance)
-                    │                   └─ GitHub release
-                    │
-                    └─ sync-package.yml (daily) → PR "bump to vX.Y.Z"
-                          └─ CI: unit, contract, chart render, e2e, Grafana
-                                └─ merge → deployed version is now provably the released one
+  └─ newer Cube tag?
+       ├─ verify: unit + contract vs vX.Y.Z + pack        (must pass first)
+       ├─ open/update PR "release: X.Y.Z"
+       └─ auto-merge  (AUTO_RELEASE ≠ false)
+            └─ dispatch publish  (AUTO_PUBLISH = true)
+                 └─ publish.yml
+                     ├─ tag == package.json (on tag events)
+                     ├─ vX.Y.Z is a real cubejs/cube tag
+                     ├─ contract vs vX.Y.Z
+                     ├─ pack, not already published
+                     ├─ npm publish with provenance
+                     ├─ tag vX.Y.Z
+                     └─ GitHub release
+
+sync-package.yml (daily, umbrella)
+  └─ newest published tag
+       ├─ verify: unit + contract + chart render + e2e + Grafana,
+       │          against the PUBLISHED tarball
+       ├─ open PR "bump to vX.Y.Z"
+       └─ auto-merge  (AUTO_RELEASE ≠ false)
 ```
+
+Nothing merges before the checks for that change have run, and the checks run **before**
+the pull request is opened — because a PR pushed with the default `GITHUB_TOKEN` does not
+get a CI run of its own.
+
+## Switches
+
+| Repository variable | Default | Effect |
+| --- | --- | --- |
+| `AUTO_RELEASE` | unset (≈ true) | Set to `false` to leave release and sync PRs open for review instead of merging them |
+| `AUTO_PUBLISH` | unset | Set to `true` to tag and publish automatically after a merge. Leave unset until npm authentication works |
+
+| Secret | Default | Effect |
+| --- | --- | --- |
+| `RELEASE_TOKEN` | unset | A PAT with `repo` scope. When set, PRs are pushed with it, so they get ordinary CI in addition to the in-workflow verification |
+| `NPM_TOKEN` | unset | Only needed if npm trusted publishing is unavailable |
 
 ## Gates, and why each exists
 
@@ -66,21 +87,40 @@ detect-cube-release.yml  (daily)
 
 ## Cutting a release
 
-Automatic:
+Automatic, with `AUTO_RELEASE` unset and `AUTO_PUBLISH=true`:
 
-1. `detect-cube-release.yml` finds `cubejs/cube:vX.Y.Z` newer than `package.json` and opens
-   `release/X.Y.Z` with the version and a CHANGELOG stub.
-2. Review it. The contract check in CI tells you immediately whether Cube's event vocabulary
-   moved; if it did, fix the contract in the same PR (see the `cube-upstream-contract` skill).
-3. Merge, then tag:
+1. `detect-cube-release.yml` finds `cubejs/cube:vX.Y.Z` newer than `package.json`.
+2. It runs unit tests, the contract against `vX.Y.Z`, and `npm pack`. If any of them fail,
+   nothing is opened and the workflow fails — that is the alarm to run the
+   `cube-upstream-contract` skill.
+3. It opens or updates `release/X.Y.Z` and squash-merges it, provided the branch touches
+   only `package.json`, `package-lock.json` and `CHANGELOG.md`.
+4. It dispatches `publish.yml`, which re-runs every gate, publishes with provenance, tags
+   the release and creates the GitHub release.
+5. The umbrella's `sync-package.yml` bumps the submodule to the new tag, proves the pair
+   with e2e and Grafana against the published tarball, and merges.
 
-   ```bash
-   git checkout main && git pull
-   git tag vX.Y.Z && git push origin vX.Y.Z
-   ```
+Read the run summary rather than assuming: the gates are in the logs.
 
-4. `publish.yml` runs the gates and publishes. Watch the run; the last step confirms the
-   registry serves the version before creating the GitHub release.
+### Manual, when a gate is red
+
+If step 2 fails, the event vocabulary moved and the contract needs a human:
+
+```bash
+git checkout -b release/cube-X.Y.Z
+# follow the cube-upstream-contract skill
+make test-contract CUBE_REPO=../cube   # in the umbrella
+```
+
+Then push the branch and let the normal PR flow run.
+
+### Manual publish (first release, or when AUTO_PUBLISH is off)
+
+```bash
+cd packages/cube-prometheus
+npm publish --access public --otp=<code>
+git tag vX.Y.Z && git push origin vX.Y.Z
+```
 
 Manual hotfix (same version, before any tag): run `publish.yml` with `workflow_dispatch`
 and `dry_run: true` to execute every gate without publishing.
