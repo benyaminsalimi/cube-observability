@@ -65,7 +65,8 @@ jobs:
           git checkout -B "$branch"
           git add packages/cube-prometheus
           git commit -m "chore: bump cube-prometheus to ${TAG}"
-          git push --force-with-lease origin "$branch"
+          # Owned by this workflow and rebuilt from main on every run.
+          git push --force origin "$branch"
 
           cat > /tmp/pr.md <<EOF
           Bumps \`packages/cube-prometheus\` to \`${TAG}\`.
