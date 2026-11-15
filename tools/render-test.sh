@@ -18,6 +18,10 @@ fail=0
 ok()  { pass=$((pass + 1)); printf '  ok   %s\n' "$1"; }
 bad() { fail=$((fail + 1)); printf '  FAIL %s\n         %s\n' "$1" "${2:-}"; }
 
+# Count occurrences without a short-circuiting `grep -q`: under `pipefail`, grep exiting at
+# the first match sends SIGPIPE to the producer and the pipeline reports failure.
+count() { printf '%s' "$1" | grep -c -- "$2" || true; }
+
 "$HELM" lint "$CHART" >/tmp/cube-helm-lint.log 2>&1 \
   && ok "helm lint" \
   || bad "helm lint" "$(tail -5 /tmp/cube-helm-lint.log)"
@@ -30,34 +34,34 @@ if [ $? -ne 0 ]; then
 fi
 
 for object in "kind: PodMonitor" "kind: PrometheusRule" "kind: ConfigMap"; do
-  if printf '%s' "$DEFAULT" | grep -q "$object"; then ok "renders $object"; else bad "renders $object"; fi
+  if [ "$(count "$DEFAULT" "$object")" -gt 0 ]; then ok "renders $object"; else bad "renders $object"; fi
 done
 
-if [ "$(printf '%s' "$DEFAULT" | grep -c 'kind: PodMonitor')" -eq 2 ]; then
+if [ "$(count "$DEFAULT" 'kind: PodMonitor')" -eq 2 ]; then
   ok "renders one PodMonitor per Cube component (api + worker)"
 else
   bad "renders one PodMonitor per Cube component (api + worker)"
 fi
 
-if printf '%s' "$DEFAULT" | grep -q 'targetPort: 9464'; then
+if [ "$(count "$DEFAULT" 'targetPort: 9464')" -gt 0 ]; then
   ok "scrapes by targetPort, so no chart fork is required"
 else
   bad "scrapes by targetPort, so no chart fork is required"
 fi
 
-if printf '%s' "$DEFAULT" | grep -q 'kind: ServiceMonitor'; then
-  bad "ServiceMonitor is off by default"
-else
+if [ "$(count "$DEFAULT" 'kind: ServiceMonitor')" -eq 0 ]; then
   ok "ServiceMonitor is off by default"
-fi
-
-if printf '%s' "$DEFAULT" | grep -q '__NAMESPACE__'; then
-  bad "rule namespace placeholders are substituted"
 else
-  ok "rule namespace placeholders are substituted"
+  bad "ServiceMonitor is off by default"
 fi
 
-if [ "$(printf '%s' "$DEFAULT" | grep -c 'grafana_dashboard: "1"')" -eq 4 ]; then
+if [ "$(count "$DEFAULT" '__NAMESPACE__')" -eq 0 ]; then
+  ok "rule namespace placeholders are substituted"
+else
+  bad "rule namespace placeholders are substituted"
+fi
+
+if [ "$(count "$DEFAULT" 'grafana_dashboard: "1"')" -eq 4 ]; then
   ok "renders four dashboard ConfigMaps for the Grafana sidecar"
 else
   bad "renders four dashboard ConfigMaps for the Grafana sidecar"
@@ -69,16 +73,18 @@ DISABLED="$("$HELM" template cube-observability "$CHART" --namespace cube \
   --set alerts.enabled=false \
   --set dashboards.enabled=false)"
 
-if printf '%s' "$DISABLED" | grep -qE 'kind: (PodMonitor|PrometheusRule|ConfigMap)'; then
-  bad "everything can be switched off"
-else
+if [ "$(count "$DISABLED" 'kind: PodMonitor')" -eq 0 ] \
+  && [ "$(count "$DISABLED" 'kind: PrometheusRule')" -eq 0 ] \
+  && [ "$(count "$DISABLED" 'kind: ConfigMap')" -eq 0 ]; then
   ok "everything can be switched off"
+else
+  bad "everything can be switched off"
 fi
 
-if printf '%s' "$DISABLED" | grep -q 'monitoring.coreos.com'; then
-  bad "a cluster without CRDs can install with the CRD objects disabled"
-else
+if [ "$(count "$DISABLED" 'monitoring.coreos.com')" -eq 0 ]; then
   ok "a cluster without CRDs can install with the CRD objects disabled"
+else
+  bad "a cluster without CRDs can install with the CRD objects disabled"
 fi
 
 printf '\n%d passed, %d failed\n' "$pass" "$fail"

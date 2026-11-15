@@ -27,16 +27,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 20
-      # The contract check needs a Cube checkout; pin it to the release under test.
-      - uses: actions/checkout@v7
-        with:
-          repository: cube-js/cube
-          ref: v1.8.25
-          path: .cube
       - run: make tools
       - run: cd packages/cube-prometheus && npm ci --no-audit --no-fund
       - run: make test-gen
-      - run: make test-contract CUBE_REPO=${{ github.workspace }}/.cube
+      - name: Contract against the Cube release the package claims
+        run: |
+          set -eu
+          v="$(node -p "require('./packages/cube-prometheus/package.json').version")"
+          git clone --depth 1 --branch "v${v}" https://github.com/cube-js/cube.git .cube
+          make test-contract CUBE_REPO="$PWD/.cube"
       - run: make test-static
 
   render:
