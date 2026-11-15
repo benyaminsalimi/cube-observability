@@ -43,5 +43,8 @@ fi
 "${COMPOSE[@]}" up -d >/tmp/cube-grafana-up.log 2>&1 \
   || { echo "  FAIL compose up (see /tmp/cube-grafana-up.log)"; tail -20 /tmp/cube-grafana-up.log; exit 1; }
 
-node verify-grafana.mjs
-exit $?
+# A verification that hangs is a failure too: the panels are all local HTTP calls.
+timeout "${GRAFANA_VERIFY_TIMEOUT:-600}" node verify-grafana.mjs
+rc=$?
+echo "verify exit=${rc}"
+exit "$rc"

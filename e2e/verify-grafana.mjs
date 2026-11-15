@@ -264,3 +264,9 @@ main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+// If the event loop drains before main() settles, this fires with the current code and
+// makes that visible instead of looking like a clean, instant run.
+process.on('beforeExit', (code) => {
+  console.log(`beforeExit code=${code}`);
+});
