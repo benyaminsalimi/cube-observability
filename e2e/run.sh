@@ -78,11 +78,13 @@ load_query() {
 
 printf 'build\n'
 if [ "$BUILD" -eq 1 ]; then
-  if "${COMPOSE[@]}" build cube >/tmp/cube-e2e-build.log 2>&1; then
+  if "${COMPOSE[@]}" build --progress plain cube >/tmp/cube-e2e-build.log 2>&1; then
     ok "exporter image builds on top of cubejs/cube"
   else
     bad "exporter image builds" "see /tmp/cube-e2e-build.log"
-    tail -20 /tmp/cube-e2e-build.log
+    # Surface the underlying npm/docker error, not just the failing Dockerfile line.
+    grep -iE "npm (err|error)|EACCES|ENOENT|not found|404|403|failed to|did not complete" \
+      /tmp/cube-e2e-build.log | tail -20 || tail -40 /tmp/cube-e2e-build.log
     exit 1
   fi
 fi
