@@ -58,7 +58,20 @@ get a CI run of its own.
 | `npm pack` | publish | a broken `files`/`exports` map shipping an unusable tarball |
 | Chart render + `promtool` | umbrella CI | dashboards/rules referencing series that no longer exist |
 | End-to-end (Cube + Postgres) | umbrella CI | the exporter breaking against a real server |
-| Grafana panel queries | umbrella CI | provisioned dashboards that render empty |
+| Grafana panel queries | sync workflow | provisioned dashboards that render empty |
+| Grafana run reports `RESULT … failed=0` | sync workflow | a verification that silently checks nothing |
+
+## Re-verifying without releasing
+
+`sync-package.yml` takes a `force` input:
+
+```bash
+gh workflow run sync-package.yml -f force=true
+```
+
+That re-runs the whole verification against the currently pinned tag without touching the
+submodule pointer — the thing to reach for after a Cube upgrade, or when you want proof the
+check itself still works.
 
 ## Current state
 
