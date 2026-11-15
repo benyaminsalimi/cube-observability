@@ -17,5 +17,5 @@ data:
     //   CUBE_METRICS_PORT, CUBE_METRICS_PATH, CUBE_METRICS_PREFIX,
     //   CUBE_METRICS_LOGS, CUBE_METRICS_TOKEN, CUBE_METRICS_LABELS
     process.env.CUBE_METRICS_LOGS = process.env.CUBE_METRICS_LOGS || {{ .Values.cubejs.logs | quote }};
-    module.exports = require('@cube_oss/cube-prometheus').withMetrics({});
+    module.exports = require('cube-prometheus').withMetrics({});
 {{- end }}

@@ -1,7 +1,7 @@
 # Releasing
 
 Two repositories, two workflows, one rule: **the package version is the Cube release it
-was verified against**. `@cube_oss/cube-prometheus@1.8.25` means "tested against
+was verified against**. `cube-prometheus@1.8.25` means "tested against
 `cubejs/cube:v1.8.25`".
 
 ```
@@ -129,6 +129,6 @@ and `dry_run: true` to execute every gate without publishing.
 
 `sync-package.yml` in the umbrella repository opens a PR bumping `packages/cube-prometheus`
 to the new tag. Its CI runs the full end-to-end and Grafana verification against the
-**published** package (`EXPORTER_PACKAGE=@cube_oss/cube-prometheus@X.Y.Z` set in the e2e
+**published** package (`EXPORTER_PACKAGE=cube-prometheus@X.Y.Z` set in the e2e
 job). Merge only when green — that merge is what makes the deployed exporter the released
 one.

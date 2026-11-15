@@ -19,6 +19,8 @@ done
 
 PROJECT=${COMPOSE_PROJECT_NAME:-cube-observability-e2e}
 COMPOSE=(docker compose -p "$PROJECT" -f docker-compose.yml --profile observability)
+CUBE_VERSION=${CUBE_VERSION:-$(node ../tools/cube-version.mjs)}
+export CUBE_VERSION
 export GRAFANA_URL=${GRAFANA_URL:-http://127.0.0.1:13000}
 export PROMETHEUS_URL=${PROMETHEUS_URL:-http://127.0.0.1:19090}
 export CUBE_API=${CUBE_API:-http://127.0.0.1:14000/cubejs-api/v1}

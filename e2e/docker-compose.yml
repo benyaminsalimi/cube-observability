@@ -26,13 +26,15 @@ services:
       context: ..
       dockerfile: images/exporter/Dockerfile
       args:
-        CUBE_VERSION: ${CUBE_VERSION:-v1.8.25}
+        # No default here on purpose: tools/cube-version.mjs reads it from the package
+        # repository, and the e2e scripts export it. One fact, one owner.
+        CUBE_VERSION: ${CUBE_VERSION:?CUBE_VERSION must be set — use make e2e}
         # local    — copy the package from the submodule, so e2e works before a version
         #            exists on the registry
         # registry — install the published tarball at the version matching CUBE_VERSION
         #            (sync-package.yml uses this to verify a release)
         EXPORTER_PACKAGE_SOURCE: ${EXPORTER_PACKAGE_SOURCE:-local}
-        # Overrides the exact tarball, e.g. @cube_oss/cube-prometheus@1.8.25-rc.1
+        # Overrides the exact tarball, e.g. cube-prometheus@1.8.25-rc.1
         EXPORTER_PACKAGE: ${EXPORTER_PACKAGE:-}
     image: cube-exporter:e2e
     depends_on:

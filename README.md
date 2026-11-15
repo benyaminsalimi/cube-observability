@@ -3,7 +3,14 @@
 Prometheus metrics, alert rules and Grafana dashboards for a **self-hosted Cube (OSS)**
 deployment. No fork of Cube, no fork of your Helm chart, and no vendor account.
 
-- npm package: [`@cube_oss/cube-prometheus`](https://www.npmjs.com/package/@cube_oss/cube-prometheus)
+> **Unofficial.** This project is not affiliated with, endorsed by, or maintained by Cube Dev,
+> Inc. or the [cube-js/cube](https://github.com/cube-js/cube) project. It is a third-party
+> exporter that uses Cube's public `logger` configuration hook and reads only its log events.
+> Upstream Cube — the open-source semantic layer this instruments — lives at
+> <https://github.com/cube-js/cube>.
+
+
+- npm package: [`cube-prometheus`](https://www.npmjs.com/package/cube-prometheus)
 - chart + image + e2e (this repository): [benyaminsalimi/cube-observability](https://github.com/benyaminsalimi/cube-observability)
 - package source: [benyaminsalimi/cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus)
 
@@ -12,7 +19,7 @@ deployment. No fork of Cube, no fork of your Helm chart, and no vendor account.
 `cube-prometheus`, then bump the pointer here.
 
 The package is released **only** from its own repository, and its version mirrors the Cube
-release: Cube `v1.8.25` → `@cube_oss/cube-prometheus@1.8.25`. The exporter image installs
+release: upstream Cube `v1.8.26` → `cube-prometheus@1.8.26`. The exporter image installs
 that exact version from the registry, so an upgrade moves the Cube tag and the package
 version together.
 
@@ -92,9 +99,9 @@ using only Cube's public `logger` config option.
 If you only want the exporter in your own Cube image:
 
 ```bash
-npm install @cube_oss/cube-prometheus@1.8.25   # same number as your cubejs/cube tag
+npm install cube-prometheus@1.8.25   # same number as your cubejs/cube tag
 # cube.js
-module.exports = require('@cube_oss/cube-prometheus').withMetrics({ ...yourConfig });
+module.exports = require('cube-prometheus').withMetrics({ ...yourConfig });
 ```
 
 Working on this repository:
@@ -131,7 +138,7 @@ The image already ships `/cube/conf/cube.js`, which enables the exporter. If you
 own `cube.js`, add one line to it instead:
 
 ```js
-module.exports = require('@cube_oss/cube-prometheus').withMetrics({ ...yourConfig });
+module.exports = require('cube-prometheus').withMetrics({ ...yourConfig });
 ```
 
 **3. Install the chart next to it.**

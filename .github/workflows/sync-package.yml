@@ -66,7 +66,7 @@ jobs:
           set -eu
           export CUBE_VERSION="v${TAG#v}"
           export EXPORTER_PACKAGE_SOURCE=registry
-          export EXPORTER_PACKAGE="@cube_oss/cube-prometheus@${TAG#v}"
+          export EXPORTER_PACKAGE="cube-prometheus@${TAG#v}"
           git -C packages/cube-prometheus fetch --tags origin
           git -C packages/cube-prometheus checkout --detach "$TAG"
           (cd packages/cube-prometheus && npm ci --no-audit --no-fund)
@@ -98,7 +98,7 @@ jobs:
           Bumps \`packages/cube-prometheus\` to \`${TAG}\`.
 
           Verified in the workflow run that opened this pull request, against the
-          **published** tarball (\`EXPORTER_PACKAGE=@cube_oss/cube-prometheus@${TAG#v}\`):
+          **published** tarball (\`EXPORTER_PACKAGE=cube-prometheus@${TAG#v}\`):
 
           - unit tests for the exporter
           - the event-name contract against \`cubejs/cube:${TAG}\`

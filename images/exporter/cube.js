@@ -12,4 +12,4 @@
  *   CUBE_METRICS_TOKEN     optional bearer token
  *   CUBE_METRICS_LABELS    JSON object of static labels
  */
-module.exports = require('@cube_oss/cube-prometheus').withMetrics({});
+module.exports = require('cube-prometheus').withMetrics({});

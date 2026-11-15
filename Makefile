@@ -1,13 +1,14 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
 
-CUBE_VERSION ?= v1.8.25
+# The package version IS the Cube version. Do not hardcode one here.
+CUBE_VERSION ?= $(shell node tools/cube-version.mjs)
 CUBE_REPO ?= ../cube
 HELM := $(CURDIR)/.tools/helm
 PROMTOOL := $(CURDIR)/.tools/promtool
 IMAGE ?= cube-exporter:$(CUBE_VERSION)
-# Defaults to the CUBE_VERSION with the leading v stripped (cube v1.8.25 ->
-# @cube_oss/cube-prometheus@1.8.25). Override to test an unpublished package.
+# Defaults to the CUBE_VERSION with the leading v stripped (cube v1.8.26 ->
+# cube-prometheus@1.8.26). Override to test an unpublished package.
 EXPORTER_VERSION ?=
 EXPORTER_PACKAGE ?=
 

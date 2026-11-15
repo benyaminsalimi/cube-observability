@@ -21,6 +21,8 @@ for arg in "$@"; do
   esac
 done
 
+CUBE_VERSION=${CUBE_VERSION:-$(node ../tools/cube-version.mjs)}
+export CUBE_VERSION
 CUBE_PORT=${CUBE_PORT:-14000}
 METRICS_PORT=${METRICS_PORT:-19464}
 PROJECT=${COMPOSE_PROJECT_NAME:-cube-observability-e2e}
