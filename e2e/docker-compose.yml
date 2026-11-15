@@ -27,9 +27,12 @@ services:
       dockerfile: images/exporter/Dockerfile
       args:
         CUBE_VERSION: ${CUBE_VERSION:-v1.8.25}
-        # The image installs @cube_oss/cube-prometheus at the version matching
-        # CUBE_VERSION. Set EXPORTER_PACKAGE to test a specific tarball, e.g.
-        # @cube_oss/cube-prometheus@1.8.25-rc.1
+        # local    — copy the package from the submodule, so e2e works before a version
+        #            exists on the registry
+        # registry — install the published tarball at the version matching CUBE_VERSION
+        #            (sync-package.yml uses this to verify a release)
+        EXPORTER_PACKAGE_SOURCE: ${EXPORTER_PACKAGE_SOURCE:-local}
+        # Overrides the exact tarball, e.g. @cube_oss/cube-prometheus@1.8.25-rc.1
         EXPORTER_PACKAGE: ${EXPORTER_PACKAGE:-}
     image: cube-exporter:e2e
     depends_on:
