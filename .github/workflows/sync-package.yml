@@ -27,6 +27,13 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          # A PAT makes the push trigger normal CI on the pull request; with the default
+          # token the suite below runs in this job instead.
+          token: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
 
       - name: Find the newest package tag
         id: tag
@@ -50,10 +57,28 @@ jobs:
             echo "update=true" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Verify the published package before opening a pull request
+        if: steps.tag.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -eu
+          export CUBE_VERSION="v${TAG#v}"
+          export EXPORTER_PACKAGE="@cube_oss/cube-prometheus@${TAG#v}"
+          git -C packages/cube-prometheus fetch --tags origin
+          git -C packages/cube-prometheus checkout --detach "$TAG"
+          (cd packages/cube-prometheus && npm ci --no-audit --no-fund)
+          make tools
+          git clone --depth 1 --branch "v${TAG#v}" https://github.com/cube-js/cube.git /tmp/cube
+          CUBE_REPO=/tmp/cube make test
+          make e2e
+          make grafana
+
       - name: Open a pull request with the bumped pointer
         if: steps.tag.outputs.update == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}
         run: |
           set -eu
@@ -71,7 +96,8 @@ jobs:
           cat > /tmp/pr.md <<EOF
           Bumps \`packages/cube-prometheus\` to \`${TAG}\`.
 
-          CI on this pull request runs the full suite against the new package:
+          Verified in the workflow run that opened this pull request, against the
+          **published** tarball (\`EXPORTER_PACKAGE=@cube_oss/cube-prometheus@${TAG#v}\`):
 
           - unit tests for the exporter
           - the event-name contract against \`cubejs/cube:${TAG}\`
@@ -79,7 +105,7 @@ jobs:
           - end-to-end against a real Cube and Postgres
           - every dashboard panel queried through Grafana
 
-          Merge only when all of it is green.
+          Merge when the review looks right; the suite has already run.
           EOF
 
           if gh pr view "$branch" >/dev/null 2>&1; then
