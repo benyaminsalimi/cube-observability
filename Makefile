@@ -12,7 +12,7 @@ IMAGE ?= cube-exporter:$(CUBE_VERSION)
 EXPORTER_VERSION ?=
 EXPORTER_PACKAGE ?=
 
-.PHONY: help tools gen test test-unit test-gen test-contract test-static test-render test-e2e image e2e grafana clean
+.PHONY: help tools gen test test-unit test-gen test-contract test-static test-render test-e2e image e2e grafana e2e-down clean
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) \
@@ -53,6 +53,10 @@ e2e: ## Full end-to-end test: real Cube, real Postgres, real scrape
 
 grafana: ## End-to-end plus Grafana: every dashboard panel queried through Grafana
 	@CUBE_VERSION=$(CUBE_VERSION) ./e2e/grafana.sh
+
+e2e-down: ## Remove the e2e stack and its volumes
+	@CUBE_VERSION=$(CUBE_VERSION) docker compose -p cube-observability-e2e \
+	  -f e2e/docker-compose.yml --profile observability down -v --remove-orphans
 
 clean: ## Remove local build artifacts
 	@rm -rf .tools packages/cube-prometheus/node_modules
