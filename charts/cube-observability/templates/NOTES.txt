@@ -1,0 +1,31 @@
+cube-observability {{ .Chart.Version }} (contract: Cube {{ .Chart.AppVersion }})
+
+{{- $ns := include "cube-observability.namespace" . }}
+
+Scrape objects and rules were installed into namespace {{ $ns }}.
+
+Verify Prometheus picked them up:
+
+  kubectl -n {{ $ns }} get podmonitor,prometheusrule
+
+Query the endpoint from inside the cluster:
+
+  kubectl -n {{ $ns }} exec deploy/{{ index .Values.cube.selectorLabels "app.kubernetes.io/name" }} -- \
+    wget -qO- http://127.0.0.1:{{ .Values.metrics.port }}{{ .Values.metrics.path }} | head
+
+{{- if .Values.dashboards.enabled }}
+
+Dashboards ship as ConfigMaps labelled {{ .Values.dashboards.label }}={{ .Values.dashboards.labelValue }}.
+The Grafana dashboard sidecar imports them automatically; open the "{{ .Values.dashboards.folder }}" folder.
+{{- end }}
+
+The exporter image must be deployed for this chart to have anything to scrape:
+
+  image.repository: your-registry/cube-exporter
+  image.tag: {{ .Chart.AppVersion }}
+
+Build it with `make image CUBE_VERSION={{ .Chart.AppVersion }}`.
+
+Runbook: docs/operations.md
+Upgrade procedure for a new Cube release: docs/upgrade-cube.md (or the
+cube-upstream-contract skill).

@@ -1,0 +1,78 @@
+# Values for cube-observability.
+#
+# This chart deploys no workloads: it attaches scrape objects, alert rules and
+# dashboards to a Cube deployment installed from another chart. Nothing here patches
+# that chart, so there is no fork to maintain.
+
+cube:
+  ## Namespace the Cube pods live in. Defaults to the release namespace, which is what
+  ## you want when both charts are installed side by side.
+  ##
+  namespace: ""
+
+  ## Labels used to select Cube API and worker pods.
+  ## These defaults match the community `gadsme/cube` chart. Override them if your
+  ## deployment uses different labels, otherwise the scrape targets will not resolve.
+  ##
+  selectorLabels:
+    app.kubernetes.io/name: cube
+  componentLabelKey: app.kubernetes.io/component
+  apiComponentLabel: api
+  workerComponentLabel: worker
+
+metrics:
+  ## Port the exporter listens on inside the Cube pods. Must match CUBE_METRICS_PORT.
+  ##
+  port: 9464
+  path: /metrics
+
+scrape:
+  api:
+    ## PodMonitor scrapes the pod IP directly, so no Service port and no container port
+    ## declaration is required — which is why this chart needs no fork of your Cube chart.
+    ##
+    podMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+    ## Alternative for clusters that expose a named `http-metrics` port on a Service.
+    ##
+    serviceMonitor:
+      enabled: false
+      portName: http-metrics
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+  worker:
+    ## The refresh worker has no Service; a PodMonitor is the only way to reach
+    ## `Refresh Scheduler Run/Error` events.
+    ##
+    podMonitor:
+      enabled: true
+      interval: 30s
+      scrapeTimeout: 10s
+      labels: {}
+
+alerts:
+  ## Requires the monitoring.coreos.com CRDs (prometheus-operator).
+  ##
+  enabled: true
+  labels: {}
+
+dashboards:
+  ## Rendered as ConfigMaps for the Grafana dashboard sidecar.
+  ##
+  enabled: true
+  label: grafana_dashboard
+  labelValue: "1"
+  folderAnnotation: grafana_folder
+  folder: Cube
+
+cubejs:
+  ## The exporter image already ships /cube/conf/cube.js, so this is only needed when
+  ## you want the chart to own that file (for example to change the log mode).
+  ## Enabling it requires mounting the ConfigMap into your Cube deployment yourself.
+  ##
+  enabled: false
+  logs: json

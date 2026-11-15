@@ -1,0 +1,19 @@
+apiVersion: v2
+name: cube-observability
+description: Prometheus scrape objects, alert rules and Grafana dashboards for a self-hosted Cube deployment
+type: application
+version: 0.1.0
+# The Cube release this chart's metric contract was validated against.
+# Bump together with the exporter image tag; `make contract` re-verifies it.
+appVersion: "1.8.25"
+keywords:
+  - cube
+  - cubejs
+  - prometheus
+  - grafana
+  - observability
+home: https://github.com/cube-js/cube
+sources:
+  - https://github.com/cube-js/cube
+annotations:
+  category: Monitoring

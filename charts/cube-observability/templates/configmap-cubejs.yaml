@@ -1,0 +1,21 @@
+{{- if .Values.cubejs.enabled }}
+{{- /*
+Optional. The exporter image already ships /cube/conf/cube.js, so this ConfigMap exists
+only for operators who want the chart to own that file. Mounting it is up to your Cube
+chart (config.volumes / config.volumeMounts with subPath: cube.js).
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cube-observability.name" . }}-cubejs
+  namespace: {{ include "cube-observability.namespace" . }}
+  labels:
+    {{- include "cube-observability.labels" . | nindent 4 }}
+data:
+  cube.js: |-
+    // Enables the Cube metrics exporter. Configuration is env-driven:
+    //   CUBE_METRICS_PORT, CUBE_METRICS_PATH, CUBE_METRICS_PREFIX,
+    //   CUBE_METRICS_LOGS, CUBE_METRICS_TOKEN, CUBE_METRICS_LABELS
+    process.env.CUBE_METRICS_LOGS = process.env.CUBE_METRICS_LOGS || {{ .Values.cubejs.logs | quote }};
+    module.exports = require('@cube_oss/cube-prometheus').withMetrics({});
+{{- end }}

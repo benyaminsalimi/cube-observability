@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: cube
+      POSTGRES_PASSWORD: cube
+      POSTGRES_DB: ecom
+    # Log every statement so the end-to-end test can prove the trace comment reached
+    # the warehouse, not just that Cube thought it did.
+    command:
+      - postgres
+      - -c
+      - log_statement=all
+      - -c
+      - log_min_duration_statement=0
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/10-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cube -d ecom"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  cube:
+    build:
+      context: ..
+      dockerfile: images/exporter/Dockerfile
+      args:
+        CUBE_VERSION: ${CUBE_VERSION:-v1.8.25}
+        # Set to @cube_oss/cube-prometheus@<version> to test the published tarball
+        # instead of the working tree.
+        EXPORTER_PACKAGE: ${EXPORTER_PACKAGE:-}
+    image: cube-exporter:e2e
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      CUBEJS_DB_TYPE: postgres
+      CUBEJS_DB_HOST: postgres
+      CUBEJS_DB_PORT: "5432"
+      CUBEJS_DB_NAME: ecom
+      CUBEJS_DB_USER: cube
+      CUBEJS_DB_PASS: cube
+      CUBEJS_API_SECRET: e2e-secret-not-a-real-secret
+      CUBEJS_SQL_INCLUDE_TRACE_ID: "true"
+      CUBEJS_TELEMETRY: "false"
+      CUBEJS_CACHE_AND_QUEUE_DRIVER: memory
+      CUBEJS_LOG_LEVEL: info
+      CUBE_METRICS_PORT: "9464"
+      CUBE_METRICS_LABELS: '{"deployment":"e2e"}'
+    volumes:
+      - ../model:/cube/conf/model:ro
+    ports:
+      - "${CUBE_PORT:-14000}:4000"
+      - "${METRICS_PORT:-19464}:9464"
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - node -e "fetch('http://127.0.0.1:4000/livez').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 3s
+      timeout: 5s
+      retries: 40
+      start_period: 10s
+
+  # Grafana verification stack. Off by default: `docker compose --profile observability up`
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    profiles: [observability]
+    depends_on:
+      cube:
+        condition: service_healthy
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=2h
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "${PROMETHEUS_PORT:-19090}:9090"
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    profiles: [observability]
+    depends_on: [prometheus]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_MIN_REFRESH_INTERVAL: 5s
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../charts/cube-observability/files/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_PORT:-13000}:3000"

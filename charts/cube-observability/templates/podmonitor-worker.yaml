@@ -1,0 +1,29 @@
+{{- if .Values.scrape.worker.podMonitor.enabled }}
+{{- /*
+The refresh worker is a Deployment with no Service, so a ServiceMonitor cannot reach it.
+Without this monitor every `Refresh Scheduler Run/Error` series is silently missing and
+the "refresh went stale" alert can never fire.
+*/ -}}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ include "cube-observability.name" . }}-worker
+  namespace: {{ include "cube-observability.namespace" . }}
+  labels:
+    {{- include "cube-observability.labels" . | nindent 4 }}
+    {{- with .Values.scrape.worker.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ include "cube-observability.namespace" . }}
+  selector:
+    matchLabels:
+      {{- include "cube-observability.matchLabels" (list . .Values.cube.workerComponentLabel) | nindent 6 }}
+  podMetricsEndpoints:
+    - targetPort: {{ .Values.metrics.port }}
+      path: {{ .Values.metrics.path }}
+      interval: {{ .Values.scrape.worker.podMonitor.interval }}
+      scrapeTimeout: {{ .Values.scrape.worker.podMonitor.scrapeTimeout }}
+{{- end }}

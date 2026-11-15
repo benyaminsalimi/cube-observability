@@ -1,0 +1,19 @@
+{{- if .Values.dashboards.enabled }}
+{{- range $path, $_ := .Files.Glob "files/dashboards/*.json" }}
+{{- $name := base $path | trimSuffix ".json" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "cube-observability.name" $ }}-{{ $name }}
+  namespace: {{ include "cube-observability.namespace" $ }}
+  labels:
+    {{- include "cube-observability.labels" $ | nindent 4 }}
+    {{ $.Values.dashboards.label }}: {{ $.Values.dashboards.labelValue | quote }}
+  annotations:
+    {{ $.Values.dashboards.folderAnnotation }}: {{ $.Values.dashboards.folder | quote }}
+data:
+  {{ $name }}.json: |-
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}
