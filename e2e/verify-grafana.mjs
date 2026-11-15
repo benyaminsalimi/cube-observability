@@ -84,18 +84,16 @@ async function waitForCubeTarget(timeoutMs = 120000) {
 }
 
 async function waitFor(url, attempts = 60, intervalMs = 2000) {
-  console.log(`waitFor start url=${url} attempts=${attempts} interval=${intervalMs} node=${process.version} fetch=${typeof fetch}`);
   for (let i = 0; i < attempts; i += 1) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
-      console.log(`waitFor attempt ${i} status=${res.status}`);
       if (res.ok) return true;
     } catch (e) {
-      console.log(`waitFor attempt ${i} error=${e && e.name}: ${e && e.message}`);
+      // not ready yet
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
-  console.log('waitFor exhausted');
+  console.log(`waitFor exhausted after ${attempts} attempts: ${url}`);
   return false;
 }
 
@@ -167,6 +165,19 @@ async function grafanaQuery(expr) {
 }
 
 async function main() {
+  // A pending fetch alone does not keep the event loop alive: undici's connection and
+  // AbortSignal timers can be unref'd, so Node can exit 0 mid-await with checks still
+  // outstanding. Hold the process open explicitly for the duration of the run.
+  const keepAlive = setInterval(() => {}, 1000);
+
+  try {
+    await runChecks();
+  } finally {
+    clearInterval(keepAlive);
+  }
+}
+
+async function runChecks() {
   // A run that checks fewer panels than expected is broken, not a pass.
   const expected = Number(
     process.env.GRAFANA_EXPECTED_MIN || REQUIRED.length + MUST_EXECUTE.length + 10
