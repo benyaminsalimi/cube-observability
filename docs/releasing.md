@@ -61,6 +61,18 @@ get a CI run of its own.
 | Grafana panel queries | sync workflow | provisioned dashboards that render empty |
 | Grafana run reports `RESULT … failed=0` | sync workflow | a verification that silently checks nothing |
 
+### Why the Grafana gate asserts a result line
+
+`e2e/verify-grafana.mjs` ends with `RESULT passed=N failed=0`, and the workflow fails when
+that line is missing. Two reasons, both observed:
+
+- On Node 20 a pending `fetch` can leave no ref'd handles, so the event loop drains and the
+  process exits `0` mid-run. The verification now holds a ref'd interval while it works.
+- A verification that finishes in under a second used to lose its buffered stdout to
+  `process.exit()`. It sets `process.exitCode` instead.
+
+Either failure mode produced a green step with no evidence, which is worse than a red one.
+
 ## Re-verifying without releasing
 
 `sync-package.yml` takes a `force` input:
