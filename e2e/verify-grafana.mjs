@@ -84,15 +84,18 @@ async function waitForCubeTarget(timeoutMs = 120000) {
 }
 
 async function waitFor(url, attempts = 60, intervalMs = 2000) {
+  console.log(`waitFor start url=${url} attempts=${attempts} interval=${intervalMs} node=${process.version} fetch=${typeof fetch}`);
   for (let i = 0; i < attempts; i += 1) {
     try {
       const res = await fetch(url, { signal: AbortSignal.timeout(3000) });
+      console.log(`waitFor attempt ${i} status=${res.status}`);
       if (res.ok) return true;
     } catch (e) {
-      // not ready yet
+      console.log(`waitFor attempt ${i} error=${e && e.name}: ${e && e.message}`);
     }
     await new Promise((resolve) => setTimeout(resolve, intervalMs));
   }
+  console.log('waitFor exhausted');
   return false;
 }
 
