@@ -1,11 +1,19 @@
+# Build context for the exporter image.
+#
+# The image needs exactly two things from the package: package.json and src/. Everything
+# else is excluded, including the package's tests, the chart, the e2e harness and the
+# tooling — so excluding `packages` wholesale is not an option.
 **/node_modules
 **/.git
 **/coverage
 .tools
+.github
 tools
 docs
 e2e
 charts
+model
 openspec
-packages
 *.md
+*.tgz
+packages/cube-prometheus/test
