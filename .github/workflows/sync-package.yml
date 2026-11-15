@@ -10,6 +10,11 @@ on:
   schedule:
     - cron: "0 7 * * *"
   workflow_dispatch:
+    inputs:
+      force:
+        description: "Re-verify the current pin without bumping anything"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -58,7 +63,7 @@ jobs:
           fi
 
       - name: Verify the published package before opening a pull request
-        if: steps.tag.outputs.update == 'true'
+        if: steps.tag.outputs.update == 'true' || inputs.force
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
           TAG: ${{ steps.tag.outputs.tag }}
