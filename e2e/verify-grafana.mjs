@@ -164,6 +164,13 @@ async function grafanaQuery(expr) {
 }
 
 async function main() {
+  // A run that checks fewer panels than expected is broken, not a pass.
+  const expected = Number(
+    process.env.GRAFANA_EXPECTED_MIN || REQUIRED.length + MUST_EXECUTE.length + 10
+  );
+  if (!Number.isFinite(expected) || expected < 1) {
+    throw new Error('GRAFANA_EXPECTED_MIN must be a positive number of expected checks');
+  }
   console.log('\nstack');
   if (!await waitFor(`${GRAFANA}/api/health`)) {
     bad('Grafana is healthy');
@@ -242,10 +249,18 @@ async function main() {
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);
-  process.exit(fail === 0 ? 0 : 1);
+  // Machine-checkable, and printed before the process is allowed to exit so the pipe is
+  // flushed. `process.exit()` here used to truncate stdout when everything passed quickly,
+  // which made a real verification look like a silent no-op in CI.
+  if (pass < expected) {
+    console.log(`RESULT passed=${pass} failed=${fail}`);
+    throw new Error(`only ${pass} checks ran, expected at least ${expected} — the run is incomplete`);
+  }
+  console.log(`RESULT passed=${pass} failed=${fail}`);
+  process.exitCode = fail === 0 ? 0 : 1;
 }
 
 main().catch((error) => {
   console.error(error);
-  process.exit(1);
+  process.exitCode = 1;
 });

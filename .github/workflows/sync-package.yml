@@ -74,7 +74,13 @@ jobs:
           git clone --depth 1 --branch "v${TAG#v}" https://github.com/cube-js/cube.git /tmp/cube
           CUBE_REPO=/tmp/cube make test
           make e2e
-          make grafana
+          set -o pipefail
+          make grafana | tee /tmp/grafana.log
+          grep -Eq '^RESULT passed=[0-9]+ failed=0$' /tmp/grafana.log || {
+            echo "::error::Grafana verification did not report a clean result"
+            tail -30 /tmp/grafana.log
+            exit 1
+          }
 
       - name: Open a pull request with the bumped pointer
         if: steps.tag.outputs.update == 'true'
