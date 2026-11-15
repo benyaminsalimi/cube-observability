@@ -11,6 +11,11 @@ deployment. No fork of Cube, no fork of your Helm chart, and no vendor account.
 `main` branch. The package is not duplicated: edit it in
 `cube-prometheus`, then bump the pointer here.
 
+The package is released **only** from its own repository, and its version mirrors the Cube
+release: Cube `v1.8.25` → `@cube_oss/cube-prometheus@1.8.25`. The exporter image installs
+that exact version from the registry, so an upgrade moves the Cube tag and the package
+version together.
+
 ```bash
 git clone --recurse-submodules https://github.com/benyaminsalimi/cube-observability.git
 # or, in an existing clone
@@ -23,6 +28,31 @@ To ship a package change into the image, commit it in the package repository, th
 cd packages/cube-prometheus && git pull origin main && cd ../..
 git add packages/cube-prometheus && git commit -m "chore: bump cube-prometheus"
 ```
+
+### Boundaries
+
+| Repository | Owns | Must not contain |
+| --- | --- | --- |
+| [cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus) | all JavaScript: `src/`, `test/`, the npm release and its GitHub Actions workflow | chart, image, dashboards, Cube checkouts |
+| cube-observability (this repo) | chart, image, e2e, generated dashboards/rules, contract check, docs | a second copy of the package code |
+
+The submodule is a pointer, not a copy: there is exactly one source for the JS, and exactly
+one place that publishes it. This repository re-checks the package's assumptions against a
+real Cube checkout (`make test-contract`) but never publishes on its behalf.
+
+### Release flow
+
+1. In **cube-prometheus**: bump `version` in `package.json` — it must equal the Cube release
+   the package targets, without the `v` (`v1.8.25` → `1.8.25`).
+2. Push a `v<version>` tag. The repository's `publish` workflow runs the unit tests, asserts
+   the tag matches `package.json`, and publishes with provenance.
+3. In **this repository**: bump the Cube version markers (see
+   [`docs/upgrade-cube.md`](docs/upgrade-cube.md)) — the image derives the package version
+   from `CUBE_VERSION`, so the two never drift.
+4. `make image && make e2e`.
+
+Step 2 is the only way a version reaches npm. Nothing is back-filled: each Cube upgrade gets
+exactly one new package version.
 
 Cube OSS exposes only `/livez` and `/readyz`. It does, however, emit a structured logger
 event for every request, database query, cache decision and refresh cycle. This project
@@ -45,7 +75,7 @@ using only Cube's public `logger` config option.
 | Path | What it is | Publishable as |
 | --- | --- | --- |
 | `packages/cube-prometheus` | the npm package (submodule → `cube-prometheus`) | `npm publish` from that repo |
-| `images/exporter` | `FROM cubejs/cube` + the package, with a default `cube.js` | container image |
+| `images/exporter` | `FROM cubejs/cube` + the published package, with a default `cube.js` | container image |
 | `charts/cube-observability` | PodMonitors, PrometheusRule, dashboard ConfigMaps | Helm chart |
 | `tools` | contract check, generator, validators | — |
 | `e2e` | real Cube + real Postgres + real scrape | — |
@@ -62,7 +92,7 @@ using only Cube's public `logger` config option.
 If you only want the exporter in your own Cube image:
 
 ```bash
-npm install @cube_oss/cube-prometheus
+npm install @cube_oss/cube-prometheus@1.8.25   # same number as your cubejs/cube tag
 # cube.js
 module.exports = require('@cube_oss/cube-prometheus').withMetrics({ ...yourConfig });
 ```

@@ -6,6 +6,10 @@ CUBE_REPO ?= ../cube
 HELM := $(CURDIR)/.tools/helm
 PROMTOOL := $(CURDIR)/.tools/promtool
 IMAGE ?= cube-exporter:$(CUBE_VERSION)
+# Defaults to the CUBE_VERSION with the leading v stripped (cube v1.8.25 ->
+# @cube_oss/cube-prometheus@1.8.25). Override to test an unpublished package.
+EXPORTER_VERSION ?=
+EXPORTER_PACKAGE ?=
 
 .PHONY: help tools gen test test-unit test-gen test-contract test-static test-render test-e2e image e2e grafana clean
 
@@ -37,7 +41,11 @@ test-render: ## Render the chart and assert the scrape objects
 	@HELM=$(HELM) ./tools/render-test.sh
 
 image: ## Build the exporter image
-	@docker build -f images/exporter/Dockerfile --build-arg CUBE_VERSION=$(CUBE_VERSION) -t $(IMAGE) .
+	@docker build -f images/exporter/Dockerfile \
+	  --build-arg CUBE_VERSION=$(CUBE_VERSION) \
+	  --build-arg EXPORTER_VERSION=$(EXPORTER_VERSION) \
+	  --build-arg EXPORTER_PACKAGE=$(EXPORTER_PACKAGE) \
+	  -t $(IMAGE) .
 
 e2e: ## Full end-to-end test: real Cube, real Postgres, real scrape
 	@CUBE_VERSION=$(CUBE_VERSION) ./e2e/run.sh

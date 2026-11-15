@@ -7,6 +7,5 @@ docs
 e2e
 charts
 openspec
+packages
 *.md
-!packages/cube-prometheus/package.json
-!packages/cube-prometheus/src/**

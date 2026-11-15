@@ -27,8 +27,9 @@ services:
       dockerfile: images/exporter/Dockerfile
       args:
         CUBE_VERSION: ${CUBE_VERSION:-v1.8.25}
-        # Set to @cube_oss/cube-prometheus@<version> to test the published tarball
-        # instead of the working tree.
+        # The image installs @cube_oss/cube-prometheus at the version matching
+        # CUBE_VERSION. Set EXPORTER_PACKAGE to test a specific tarball, e.g.
+        # @cube_oss/cube-prometheus@1.8.25-rc.1
         EXPORTER_PACKAGE: ${EXPORTER_PACKAGE:-}
     image: cube-exporter:e2e
     depends_on:

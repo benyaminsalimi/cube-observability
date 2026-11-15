@@ -1,18 +1,25 @@
 # Exporter image.
 #
-# Two ways to get @cube_oss/cube-prometheus in:
-#   * default            — copy the package from this repository (used by the monorepo's own e2e)
-#   * EXPORTER_PACKAGE=… — install the published tarball from the registry, which is exactly
-#                          what a consumer gets. Use this to verify a release.
+# The exporter is installed from the npm registry as the published package, at the
+# version that mirrors the Cube release in the base image:
+#
+#   cubejs/cube:v1.8.25  ->  @cube_oss/cube-prometheus@1.8.25
+#
+# The package is released independently from
+# https://github.com/benyaminsalimi/cube-prometheus; this repository does not publish it.
 #
 #   docker build -f images/exporter/Dockerfile --build-arg CUBE_VERSION=v1.8.25 -t cube-exporter:v1.8.25 .
-#   docker build -f images/exporter/Dockerfile --build-arg CUBE_VERSION=v1.8.25 \
-#     --build-arg EXPORTER_PACKAGE=@cube_oss/cube-prometheus@0.1.0 -t cube-exporter:v1.8.25 .
+#
+# Overrides, for testing a release candidate or a different package version:
+#
+#   --build-arg EXPORTER_VERSION=1.8.25-rc.1
+#   --build-arg EXPORTER_PACKAGE=@cube_oss/cube-prometheus@1.8.25-rc.1
 
 ARG CUBE_VERSION=v1.8.25
 FROM cubejs/cube:${CUBE_VERSION}
 
 ARG CUBE_VERSION
+ARG EXPORTER_VERSION=""
 ARG EXPORTER_PACKAGE=""
 LABEL org.opencontainers.image.title="cube-exporter" \
       org.opencontainers.image.description="Cube (OSS) with Prometheus metrics and NDJSON logs" \
@@ -20,18 +27,16 @@ LABEL org.opencontainers.image.title="cube-exporter" \
 
 WORKDIR /cube/conf
 
-COPY packages/cube-prometheus/package.json /tmp/exporter/package.json
-COPY packages/cube-prometheus/src /tmp/exporter/src
-
+# The npm version mirrors the base image tag, so an upgrade moves both together.
 RUN set -eux; \
-    if [ -n "${EXPORTER_PACKAGE}" ]; then \
-      npm install --omit=dev --no-audit --no-fund "${EXPORTER_PACKAGE}"; \
-    else \
-      mkdir -p node_modules/@cube_oss/cube-prometheus; \
-      cp -R /tmp/exporter/. node_modules/@cube_oss/cube-prometheus/; \
-      cd node_modules/@cube_oss/cube-prometheus; \
-      npm install --omit=dev --no-audit --no-fund; \
+    version="${EXPORTER_VERSION:-${CUBE_VERSION#v}}"; \
+    package="${EXPORTER_PACKAGE:-@cube_oss/cube-prometheus@${version}}"; \
+    if [ -z "${package##*@}" ]; then \
+      echo "could not derive a package version: set EXPORTER_VERSION or CUBE_VERSION" >&2; \
+      exit 1; \
     fi; \
+    echo "installing ${package}"; \
+    npm install --omit=dev --no-audit --no-fund "${package}"; \
     npm cache clean --force; \
     node -e "require('@cube_oss/cube-prometheus'); console.log('exporter loadable')"
 

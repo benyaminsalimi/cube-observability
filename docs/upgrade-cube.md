@@ -17,7 +17,7 @@ safe when the contract still holds; `make test-contract` answers that in seconds
    make test-contract CUBE_REPO=../cube
    ```
 
-3. Bump the four version markers so they agree:
+3. Bump the version markers so they agree:
 
    | File | Field |
    | --- | --- |
@@ -25,6 +25,16 @@ safe when the contract still holds; `make test-contract` answers that in seconds
    | `e2e/docker-compose.yml` | `CUBE_VERSION` default |
    | `Makefile` | `CUBE_VERSION` |
    | `charts/cube-observability/Chart.yaml` | `appVersion` (no `v`) |
+   | `packages/cube-prometheus/package.json` | `version` (no `v`) |
+
+   The npm package version always equals the Cube version, because the image
+   installs the published package at `${CUBE_VERSION}` with the `v` stripped. A
+   Cube upgrade therefore needs a matching package release: bump
+   `packages/cube-prometheus/package.json`, tag `v<version>` in the
+   cube-prometheus repository, and let its `publish` workflow push to npm before
+   the image is built. Building the image first will fail with a `404` from the
+   registry, which is the intended loud failure rather than silently shipping the
+   previous package.
 
 4. Regenerate and run the fast suite:
 
