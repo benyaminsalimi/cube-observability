@@ -1,0 +1,89 @@
+name: sync package
+
+# Keeps packages/cube-prometheus pointed at the newest released tag of the package
+# repository, then lets this repository's CI prove the pair works before anyone merges.
+#
+# Scheduled rather than triggered from the package repository on purpose: a release should
+# never be able to push code into this repository without a reviewable commit here.
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-package
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Find the newest package tag
+        id: tag
+        run: |
+          set -eu
+          latest="$(git ls-remote --tags --refs \
+            https://github.com/benyaminsalimi/cube-prometheus.git 'v*' \
+            | awk '{print $2}' | sed 's|refs/tags/||' | sort -V | tail -1)"
+          if [ -z "$latest" ]; then
+            echo "no tags published yet"
+            echo "update=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          current="$(git -C packages/cube-prometheus describe --tags --always 2>/dev/null || echo none)"
+          echo "latest=${latest} current=${current}"
+          echo "tag=${latest}" >> "$GITHUB_OUTPUT"
+          if [ "$latest" = "$current" ]; then
+            echo "already on ${latest}"
+            echo "update=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Open a pull request with the bumped pointer
+        if: steps.tag.outputs.update == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -eu
+          branch="chore/package-${TAG}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C packages/cube-prometheus fetch --tags origin
+          git -C packages/cube-prometheus checkout --detach "$TAG"
+          git checkout -B "$branch"
+          git add packages/cube-prometheus
+          git commit -m "chore: bump cube-prometheus to ${TAG}"
+          git push --force-with-lease origin "$branch"
+
+          cat > /tmp/pr.md <<EOF
+          Bumps \`packages/cube-prometheus\` to \`${TAG}\`.
+
+          CI on this pull request runs the full suite against the new package:
+
+          - unit tests for the exporter
+          - the event-name contract against \`cubejs/cube:${TAG}\`
+          - chart render and rule validation
+          - end-to-end against a real Cube and Postgres
+          - every dashboard panel queried through Grafana
+
+          Merge only when all of it is green.
+          EOF
+
+          if gh pr view "$branch" >/dev/null 2>&1; then
+            gh pr edit "$branch" --body-file /tmp/pr.md
+          else
+            gh pr create --base main --head "$branch" \
+              --title "chore: bump cube-prometheus to ${TAG}" --body-file /tmp/pr.md
+          fi

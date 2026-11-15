@@ -212,6 +212,17 @@ Now one id links: the metric observation → the NDJSON log line → the warehou
 | `make e2e` | real Cube answers a load; one request id appears in the metric path, the log line and the warehouse SQL |
 | `make grafana` | the same stack plus Prometheus and Grafana; every dashboard panel is queried **through Grafana's own datasource proxy** |
 
+## Releasing
+
+Automated end to end: a daily workflow detects a newer Cube release, opens a version-bump
+PR, and after merge the tag runs every gate (tag/version agreement, real Cube tag,
+contract against that tag, pack, not-already-published) before `npm publish` with
+provenance and a GitHub release. A second daily workflow in this repository bumps the
+submodule and proves the pair with e2e + Grafana before merging.
+
+See [docs/releasing.md](docs/releasing.md) for the gates, the one-time npm trusted
+publishing setup, and the manual hotfix path.
+
 ## Upgrading Cube
 
 There is an agent skill for this: **`.opencode/skills/cube-upstream-contract`**. It walks

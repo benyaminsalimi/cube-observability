@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "cube-observability values",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["cube", "metrics", "scrape"],
+  "properties": {
+    "cube": {
+      "type": "object",
+      "required": ["selectorLabels", "componentLabelKey", "apiComponentLabel", "workerComponentLabel"],
+      "properties": {
+        "namespace": { "type": "string" },
+        "selectorLabels": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "string" }
+        },
+        "componentLabelKey": { "type": "string", "minLength": 1 },
+        "apiComponentLabel": { "type": "string", "minLength": 1 },
+        "workerComponentLabel": { "type": "string", "minLength": 1 }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["port", "path"],
+      "properties": {
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 },
+        "path": { "type": "string", "pattern": "^/" }
+      }
+    },
+    "scrape": {
+      "type": "object",
+      "required": ["api", "worker"],
+      "properties": {
+        "api": {
+          "type": "object",
+          "properties": {
+            "podMonitor": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "interval": { "type": "string" },
+                "scrapeTimeout": { "type": "string" },
+                "labels": { "type": "object" }
+              }
+            },
+            "serviceMonitor": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "portName": { "type": "string" },
+                "interval": { "type": "string" },
+                "scrapeTimeout": { "type": "string" },
+                "labels": { "type": "object" }
+              }
+            }
+          }
+        },
+        "worker": {
+          "type": "object",
+          "properties": {
+            "podMonitor": {
+              "type": "object",
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "interval": { "type": "string" },
+                "scrapeTimeout": { "type": "string" },
+                "labels": { "type": "object" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "alerts": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "labels": { "type": "object" }
+      }
+    },
+    "dashboards": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "label": { "type": "string" },
+        "labelValue": { "type": "string" },
+        "folderAnnotation": { "type": "string" },
+        "folder": { "type": "string" }
+      }
+    },
+    "cubejs": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "logs": { "type": "string", "enum": ["json", "passthrough", "none"] }
+      }
+    }
+  }
+}
