@@ -1,0 +1,4 @@
+[submodule "packages/cube-prometheus"]
+	path = packages/cube-prometheus
+	url = https://github.com/benyaminsalimi/cube-prometheus.git
+	branch = main

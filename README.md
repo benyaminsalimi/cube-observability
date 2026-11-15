@@ -4,11 +4,25 @@ Prometheus metrics, alert rules and Grafana dashboards for a **self-hosted Cube 
 deployment. No fork of Cube, no fork of your Helm chart, and no vendor account.
 
 - npm package: [`@cube_oss/cube-prometheus`](https://www.npmjs.com/package/@cube_oss/cube-prometheus)
-- chart + image + e2e: [benyaminsalimi/cube-observability](https://github.com/benyaminsalimi/cube-observability)
-- npm package source mirror: [benyaminsalimi/cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus)
+- chart + image + e2e (this repository): [benyaminsalimi/cube-observability](https://github.com/benyaminsalimi/cube-observability)
+- package source: [benyaminsalimi/cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus)
 
-The package is developed here and mirrored to the `cube-prometheus` repository with
-`git subtree push --prefix=packages/cube-prometheus npm-package main`.
+`packages/cube-prometheus` here is a **git submodule** pointing at the package repository's
+`main` branch. The package is not duplicated: edit it in
+`cube-prometheus`, then bump the pointer here.
+
+```bash
+git clone --recurse-submodules https://github.com/benyaminsalimi/cube-observability.git
+# or, in an existing clone
+git submodule update --init --recursive
+```
+
+To ship a package change into the image, commit it in the package repository, then:
+
+```bash
+cd packages/cube-prometheus && git pull origin main && cd ../..
+git add packages/cube-prometheus && git commit -m "chore: bump cube-prometheus"
+```
 
 Cube OSS exposes only `/livez` and `/readyz`. It does, however, emit a structured logger
 event for every request, database query, cache decision and refresh cycle. This project
@@ -30,7 +44,7 @@ using only Cube's public `logger` config option.
 
 | Path | What it is | Publishable as |
 | --- | --- | --- |
-| `packages/cube-prometheus` | the npm package: logger tap, metric catalog, log writer, listener | `npm publish` |
+| `packages/cube-prometheus` | the npm package (submodule → `cube-prometheus`) | `npm publish` from that repo |
 | `images/exporter` | `FROM cubejs/cube` + the package, with a default `cube.js` | container image |
 | `charts/cube-observability` | PodMonitors, PrometheusRule, dashboard ConfigMaps | Helm chart |
 | `tools` | contract check, generator, validators | — |
