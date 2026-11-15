@@ -3,6 +3,13 @@
 Prometheus metrics, alert rules and Grafana dashboards for a **self-hosted Cube (OSS)**
 deployment. No fork of Cube, no fork of your Helm chart, and no vendor account.
 
+- npm package: [`@cube_oss/cube-prometheus`](https://www.npmjs.com/package/@cube_oss/cube-prometheus)
+- chart + image + e2e: [benyaminsalimi/cube-observability](https://github.com/benyaminsalimi/cube-observability)
+- npm package source mirror: [benyaminsalimi/cube-prometheus](https://github.com/benyaminsalimi/cube-prometheus)
+
+The package is developed here and mirrored to the `cube-prometheus` repository with
+`git subtree push --prefix=packages/cube-prometheus npm-package main`.
+
 Cube OSS exposes only `/livez` and `/readyz`. It does, however, emit a structured logger
 event for every request, database query, cache decision and refresh cycle. This project
 turns that existing signal into a scrape surface, a log stream and a correlation id —
@@ -37,6 +44,16 @@ using only Cube's public `logger` config option.
 - Optional: `make tools` fetches `helm` and `promtool` into `.tools/` for chart and rule checks
 
 ## Quick start
+
+If you only want the exporter in your own Cube image:
+
+```bash
+npm install @cube_oss/cube-prometheus
+# cube.js
+module.exports = require('@cube_oss/cube-prometheus').withMetrics({ ...yourConfig });
+```
+
+Working on this repository:
 
 ```bash
 make tools      # helm + promtool into .tools/ (optional but recommended)
