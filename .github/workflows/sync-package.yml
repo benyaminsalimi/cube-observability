@@ -83,6 +83,19 @@ jobs:
           export EXPORTER_PACKAGE="cube-prometheus@${TAG#v}"
           git -C packages/cube-prometheus fetch --tags origin
           git -C packages/cube-prometheus checkout --detach "$TAG"
+
+          # Bump appVersion before verifying: validate.mjs compares it with the submodule's
+          # package.json, so verifying a tagged package against an unbumped chart fails on
+          # real drift that the same job is about to fix.
+          node -e '
+            const fs = require("fs");
+            const version = process.env.TAG.replace(/^v/, "");
+            const file = "charts/cube-observability/Chart.yaml";
+            const text = fs.readFileSync(file, "utf8");
+            fs.writeFileSync(file, text.replace(/^appVersion: .*$/m, `appVersion: "${version}"`));
+            console.log(`${file} -> appVersion ${version}`);
+          '
+
           (cd packages/cube-prometheus && npm ci --no-audit --no-fund)
           make tools
           git clone --depth 1 --branch "v${TAG#v}" https://github.com/cube-js/cube.git /tmp/cube
