@@ -52,11 +52,20 @@ jobs:
             echo "update=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          current="$(git -C packages/cube-prometheus describe --tags --always 2>/dev/null || echo none)"
-          echo "latest=${latest} current=${current}"
+          # Compare against the chart's appVersion, not the submodule ref. The ref can
+          # already sit on the tag commit (the release tags the commit main was on) while
+          # Chart.yaml still claims the previous version — which is exactly how this repo
+          # ended up "up to date" with appVersion one release behind.
+          current="$(node -p '
+            const fs = require("fs");
+            const text = fs.readFileSync("charts/cube-observability/Chart.yaml", "utf8");
+            const match = text.match(/^appVersion:\s*"([^"]+)"/m);
+            process.stdout.write(match ? match[1] : "none");
+          ')"
+          echo "latest=${latest} chart-appVersion=${current}"
           echo "tag=${latest}" >> "$GITHUB_OUTPUT"
-          if [ "$latest" = "$current" ]; then
-            echo "already on ${latest}"
+          if [ "v${current}" = "$latest" ]; then
+            echo "chart already claims ${latest}"
             echo "update=false" >> "$GITHUB_OUTPUT"
           else
             echo "update=true" >> "$GITHUB_OUTPUT"
