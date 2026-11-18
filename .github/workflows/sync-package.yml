@@ -99,8 +99,20 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git -C packages/cube-prometheus fetch --tags origin
           git -C packages/cube-prometheus checkout --detach "$TAG"
+
+          # The chart's appVersion is derived from the package version, not maintained by
+          # hand; validate.mjs fails the run when they disagree.
+          node -e '
+            const fs = require("fs");
+            const version = process.env.TAG.replace(/^v/, "");
+            const file = "charts/cube-observability/Chart.yaml";
+            const text = fs.readFileSync(file, "utf8");
+            fs.writeFileSync(file, text.replace(/^appVersion: .*$/m, `appVersion: "${version}"`));
+            console.log(`${file} -> appVersion ${version}`);
+          '
+
           git checkout -B "$branch"
-          git add packages/cube-prometheus
+          git add packages/cube-prometheus charts/cube-observability/Chart.yaml
           git commit -m "chore: bump cube-prometheus to ${TAG}"
           # Owned by this workflow and rebuilt from main on every run.
           git push --force origin "$branch"
@@ -141,7 +153,7 @@ jobs:
           # The pointer bump must be the only change; anything else needs a human.
           git fetch --quiet origin main
           changed="$(git diff --name-only "origin/main...HEAD" | sort)"
-          unexpected="$(printf '%s\n' "$changed" | grep -vE '^packages/cube-prometheus$' || true)"
+          unexpected="$(printf '%s\n' "$changed" | grep -vE '^(packages/cube-prometheus|charts/cube-observability/Chart\.yaml)$' || true)"
           if [ -n "$unexpected" ]; then
             echo "::error::refusing to auto-merge: unexpected files in the sync branch"
             echo "$unexpected"
