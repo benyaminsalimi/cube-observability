@@ -73,6 +73,23 @@ that line is missing. Two reasons, both observed:
 
 Either failure mode produced a green step with no evidence, which is worse than a red one.
 
+## Failure modes this pipeline has actually hit
+
+Each of these produced a green-looking state that was wrong. They are listed so the next
+person recognises the shape immediately.
+
+| Symptom | Cause | Guard now |
+| --- | --- | --- |
+| Release merged, publish never ran | `gh workflow run` needs `actions: write`; the detector only had contents/PR write | permission granted |
+| Next day reported success with `main` ahead of npm | the daily check compared versions, found them equal, and skipped everything | registry reconciliation: every run asserts the merged version is served, and re-dispatches when `AUTO_PUBLISH` |
+| `ENEEDAUTH` on publish | npm 10 (bundled with Node 20) has no OIDC exchange | Node 22 + npm 11 |
+| `EBADENGINE` installing `npm@latest` | npm 12 requires Node ≥22.22 | pin the CLI major, not `latest` |
+| Published but the run failed, no tag or release | the registry confirmation gave up after 25s while npm propagated | poll up to four minutes, then check dist-tag and provenance |
+| Grafana step "passed" with no output | Node 20 let the loop drain mid-fetch; `process.exit()` truncated stdout | ref'd keep-alive, `RESULT` line asserted by the workflow, minimum-check floor |
+
+The pattern: a step that cannot report a result must fail, not pass. Every gate here now
+prints a machine-checkable line.
+
 ## Re-verifying without releasing
 
 `sync-package.yml` takes a `force` input:
