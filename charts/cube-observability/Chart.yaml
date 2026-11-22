@@ -5,7 +5,7 @@ type: application
 version: 0.1.0
 # The Cube release this chart's metric contract was validated against.
 # Bump together with the exporter image tag; `make contract` re-verifies it.
-appVersion: "1.8.31"
+appVersion: "1.8.32"
 keywords:
   - cube
   - cubejs
